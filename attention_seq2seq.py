@@ -47,7 +47,7 @@ spacy_de = spacy.load('de')
 spacy_en = spacy.load('en')
 
 def tokenize_de(text):
-  return [token.text for token in spacy_de.tokenizer(text)][::-1]
+  return [token.text for token in spacy_de.tokenizer(text)]
 
 def tokenize_en(text):
   return [token.text for token in spacy_en.tokenizer(text)]
@@ -391,9 +391,9 @@ def translate_sentence(sentence, src_field, trg_field, model, device, max_len=50
         
     if isinstance(sentence, str):
         nlp = spacy.load('de')
-        tokens = [token.text.lower() for token in nlp(sentence)][::-1]
+        tokens = [token.text.lower() for token in nlp(sentence)]
     else:
-        tokens = [token.lower() for token in sentence][::-1]
+        tokens = [token.lower() for token in sentence]
 
     tokens = [src_field.init_token] + tokens + [src_field.eos_token] 
     src_indexes = [src_field.vocab.stoi[token] for token in tokens]
@@ -425,11 +425,38 @@ def translate_sentence(sentence, src_field, trg_field, model, device, max_len=50
     trg_tokens = [trg_field.vocab.itos[i] for i in trg_indexes]
     return trg_tokens[1:], attentions[:len(trg_tokens)-1]
 
-index = 2
+index = 12
 
-print(' '.join(train_data.examples[index].en))
-trg_tokens, attentions_scores = translate_sentence(' '.join(train_data.examples[index].de[::-1]), SRC, TRG, seq2seq, device)
+origin_sentence = ' '.join(train_data.examples[index].de)
+target_sentence = ' '.join(train_data.examples[index].en)
+
+print(target_sentence)
+trg_tokens, attentions_scores = translate_sentence(origin_sentence, SRC, TRG, seq2seq, device)
 if trg_tokens[-1] == TRG.eos_token:
   trg_tokens = trg_tokens[:-1]
-print(' '.join(trg_tokens))
+
+translated = ' '.join(trg_tokens)
+print(translated)
+
+from matplotlib import pyplot as plt
+
+
+def show_attention(origin, translated, attention):  
+    fig, ax = plt.subplots(figsize=(6, 6))
+    
+    attention = attention.squeeze(1).cpu().detach().numpy()
+
+    origin = origin.split()
+    translated = translated.split()
+
+    ax.set_xticks(range(len(origin) + 2))
+    ax.set_yticks(range(len(translated) + 1))
+
+    ax.set_xticklabels(['<sos>'] + origin + ['<eos>'], rotation=45)
+    ax.set_yticklabels(translated + ['<eos>'])
+
+    ax.imshow(attention)
+
+
+show_attention(origin_sentence, translated, attentions_scores)
 
